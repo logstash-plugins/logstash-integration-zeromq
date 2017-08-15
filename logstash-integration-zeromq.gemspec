@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name          = 'logstash-integration-zeromq'
-  s.version         = '0.1.1'
+  s.version         = '0.1.2'
   s.licenses      = ['Apache License (2.0)']
   s.summary       = 'Logstash integration with ZeroMQ with input filter and output plugins'
   s.homepage      = 'https://elastic.co'

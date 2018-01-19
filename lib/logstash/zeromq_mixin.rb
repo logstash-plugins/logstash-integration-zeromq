@@ -2,26 +2,10 @@
 require 'ffi-rzmq'
 require "logstash/namespace"
 
-class LogStash::PluginMixins::ZeroMQContext
-  class << self
-    def context
-      @context ||= ZMQ::Context.new
-    end
-  end
-end
-
 module LogStash::PluginMixins::ZeroMQ
   # LOGSTASH-400
   # see https://github.com/chuckremes/ffi-rzmq/blob/master/lib/ffi-rzmq/socket.rb#L93-117
   STRING_OPTS = %w{IDENTITY SUBSCRIBE UNSUBSCRIBE}
-
-  def context
-    LogStash::PluginMixins::ZeroMQContext.context
-  end
-
-  def terminate_context
-    context.terminate
-  end
 
   def setup(socket, address)
     if server?

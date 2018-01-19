@@ -6,6 +6,7 @@ require "securerandom"
 
 def send_mock_messages(messages, &block)
   socket = double("socket")
+  allow(socket).to receive(:close)
   expect(socket).to receive(:recv_strings) do |arr|
     messages.each do |msg|
       msg.each do |frame|
@@ -14,45 +15,27 @@ def send_mock_messages(messages, &block)
     end
     0
   end
-  plugin.instance_variable_set(:@zsocket, socket)
+  subject.instance_variable_set(:@zsocket, socket)
   q = []
-  plugin.send(:handle_message, q)
+  subject.send(:handle_message, q)
   q
 end
 
-describe LogStash::Inputs::ZeroMQ, :zeromq => true do
+describe LogStash::Inputs::ZeroMQ do
 
-  context "when register and close" do
+  let(:config) { { "topology" => "pushpull" } }
+  subject { described_class.new(config) }
 
-    let(:plugin) { LogStash::Plugin.lookup("input", "zeromq").new({ "topology" => "pushpull" }) }
-
-    it "should register and close without errors" do
-      expect { plugin.register }.to_not raise_error
-      expect { plugin.close }.to_not raise_error
-    end
-
-    context "when interrupting the plugin" do
-      it_behaves_like "an interruptible input plugin" do
-        let(:config) { { "topology" => "pushpull" } }
-        before do
-          subject.register
-        end
-        after do
-          subject.close
-        end
-      end
-    end
-
+  context "when interrupting the plugin" do
+    it_behaves_like "an interruptible input plugin"
   end
 
   context "pubsub" do
-    topic_field = SecureRandom.hex
-    let(:plugin) { LogStash::Plugin.lookup("input", "zeromq").new({"topology" => "pubsub", "topic_field" => topic_field}) }
+    let(:topic_field) { SecureRandom.hex }
+    let(:config) { { "topology" => "pubsub", "topic_field" => topic_field} }
 
-    before do
-      allow(plugin).to receive(:init_socket)
-      plugin.register
-    end
+    before(:each) { subject.register }
+    after(:each) { subject.stop }
 
     it "should set the topic field with multiple message frames" do
       events = send_mock_messages([["topic", '{"message": "message"}', '{"message": "message2"}']])
@@ -65,12 +48,10 @@ describe LogStash::Inputs::ZeroMQ, :zeromq => true do
   end
 
   context "pushpull" do
-    let(:plugin) { LogStash::Plugin.lookup("input", "zeromq").new({ "topology" => "pushpull" }) }
+    let(:config) { {"topology" => "pushpull"} }
 
-    before do
-      allow(plugin).to receive(:init_socket)
-      plugin.register
-    end
+    before(:each) { subject.register }
+    after(:each) { subject.stop }
 
     it "should receive multiple frames" do
       events = send_mock_messages([['{"message": "message"}', '{"message": "message2"}']])
